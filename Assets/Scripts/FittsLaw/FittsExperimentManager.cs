@@ -12,7 +12,6 @@ namespace FittsLaw
         public int targetsPerWave = 5;
         public float maxYawAngleFromCenter = 25;
         public float maxPitchAngleFromCenter = 65;
-        public int maxWaves = 10;
 
         private Quaternion _initialCameraRotation;
         private Vector3 _initialCameraPosition;
@@ -22,29 +21,34 @@ namespace FittsLaw
         private int _totalShots;
         private int _missedShots;
         private float _waveDifficulty;
-        private int _waveIndex;
 
         private List<float> _waveScores = new List<float>();
         private List<float> _waveTimes = new List<float>();
         private List<float> _waveErrorRates = new List<float>();
+
+        private Vector3 _lastTargetPos = Vector3.zero;
+        private bool _experimentRunning = true;
 
         void Start()
         {
             Camera cam = Camera.main;
             _initialCameraRotation = cam.transform.rotation;
             _initialCameraPosition = cam.transform.position;
+
             SpawnWave();
+        }
+
+        void Update()
+        {
+            if (_experimentRunning && Input.GetKeyDown(KeyCode.S))
+            {
+                _experimentRunning = false;
+                StopExperiment();
+            }
         }
 
         void SpawnWave()
         {
-            if (_waveIndex >= maxWaves)
-            {
-                ShowSummary();
-                return;
-            }
-
-            _waveIndex++;
             _totalShots = 0;
             _missedShots = 0;
             _waveDifficulty = 0f;
@@ -77,30 +81,42 @@ namespace FittsLaw
             if (!_currentTargets.Contains(target.gameObject))
                 return;
 
+            float distanceFromLast = _lastTargetPos == Vector3.zero ? 0f : Vector3.Distance(target.transform.position, _lastTargetPos);
+            _lastTargetPos = target.transform.position;
+
             _targetsHit++;
             float distance = Vector3.Distance(Camera.main.transform.position, target.transform.position);
             float size = target.transform.localScale.x;
             float id = Mathf.Log((2 * distance) / size, 2);
             _waveDifficulty += id;
 
+            Debug.Log($"Target Hit | Distance from last: {distanceFromLast:F2} | Success | Size: {size} | Position: {target.transform.position}");
+
             _currentTargets.Remove(target.gameObject);
             Destroy(target.gameObject);
 
-            if (_targetsHit >= targetsPerWave)
+            if (_targetsHit >= targetsPerWave && _experimentRunning)
             {
                 _waveDifficulty /= targetsPerWave;
                 EndWave();
             }
         }
 
-        public void RegisterShot(bool hit)
+        public void RegisterShot(bool hit, GameObject target = null)
         {
             _totalShots++;
-            if (!hit) _missedShots++;
+            if (!hit && target != null)
+            {
+                _missedShots++;
+                float distanceFromLast = (_lastTargetPos == Vector3.zero) ? 0f : Vector3.Distance(target.transform.position, _lastTargetPos);
+                Debug.Log($"Target Missed | Distance from last: {distanceFromLast:F2} | Size: {target.transform.localScale.x} | Position: {target.transform.position}");
+            }
         }
 
         void EndWave()
         {
+            if (!_experimentRunning) return;
+
             float waveTime = Time.time - _waveStartTime;
             float averageTime = waveTime / targetsPerWave;
             float errorRate = _totalShots > 0 ? (float)_missedShots / _totalShots : 0f;
@@ -113,7 +129,7 @@ namespace FittsLaw
             SpawnWave();
         }
 
-        void ShowSummary()
+        void StopExperiment()
         {
             float avgScore = _waveScores.Average();
             float avgTime = _waveTimes.Average();
