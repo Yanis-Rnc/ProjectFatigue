@@ -13,20 +13,29 @@ namespace Controls
         
         void Start()
         {
-            if (!XRSettings.isDeviceActive)
-            {
-                xrOrigin.SetActive(false);
-                desktopPlayer.SetActive(true);
+            
+            //if (!XRSettings.isDeviceActive)
+            
+            //{
+            
+            //    xrOrigin.SetActive(false);
+            
+            //    desktopPlayer.SetActive(true);
 
-                experimentManager.playerCamera = desktopCamera;
-            }
-            else
-            {
+                //
+            
+            //    experimentManager.playerCamera = desktopCamera;
+            
+            //}
+            
+            //else
+            
+            //{
                 xrOrigin.SetActive(true);
                 desktopPlayer.SetActive(false);
 
                 experimentManager.playerCamera = xrCamera;
-            }
+            //}
         }
     }
 }
