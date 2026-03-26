@@ -5,11 +5,11 @@ public class MenuManager : MonoBehaviour
 {
     public void StartExperiment()
     {
-        SceneManager.LoadScene("SampleScene", LoadSceneMode.Single);
+        SceneManager.LoadScene("ExperimentScene", LoadSceneMode.Single);
     }
 
-    public void QuitApp()
+    public void StartCalibration()
     {
-        Application.Quit();
+        SceneManager.LoadScene("CalibrationScene", LoadSceneMode.Single);
     }
 }
