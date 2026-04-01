@@ -1,7 +1,9 @@
 ﻿using System.Collections;
-using UnityEngine;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.XR;
 
@@ -11,8 +13,6 @@ namespace FittsLaw
     {
         public Camera playerCamera;
         public GameObject targetPrefab;
-        public float maxYawAngleFromCenter = 30f;
-        public float maxPitchAngleFromCenter = 20f;
 
         private List<GameObject> _currentTargets = new List<GameObject>();
         private int _targetsHit;
@@ -22,14 +22,27 @@ namespace FittsLaw
         private int _missedShots;
         private float _totalDifficulty;
 
-        private List<float> _hitTimes = new List<float>();
         private float _lastHitTime;
-
         private Vector3 _lastTargetPos = Vector3.zero;
         private bool _experimentRunning = true;
 
-        private Vector3 _spawnCameraPosition;
-        private Quaternion _spawnCameraRotation;
+        private Vector3[] _spawnSequence;
+        private int _spawnIndex = 0;
+
+        private struct HitRecord
+        {
+            public int Index;
+            public float Time;
+            public float AbsoluteTime;
+            public float Distance;
+            public float Size;
+            public float ID;
+            public Vector3 Position;
+            public int SeqIndex;
+            public bool IsMiss;
+        }
+
+        private List<HitRecord> _records = new List<HitRecord>();
 
         void Start()
         {
@@ -44,9 +57,8 @@ namespace FittsLaw
             yield return new WaitForSeconds(0.5f);
             _experimentStartTime = Time.time;
             _lastHitTime = Time.time;
-            _spawnCameraPosition = playerCamera.transform.position;
-            _spawnCameraRotation = playerCamera.transform.rotation;
-            SpawnRandomTarget();
+            BuildSpawnSequence();
+            SpawnNextTarget();
         }
 
         void Update()
@@ -68,30 +80,45 @@ namespace FittsLaw
             }
         }
 
-        void SpawnRandomTarget()
+        void BuildSpawnSequence()
         {
-            _spawnCameraPosition = playerCamera.transform.position;
-            _spawnCameraRotation = playerCamera.transform.rotation;
+            Vector3 c = CalibrationData.Center;
+            float r = CalibrationData.Radius;
 
+            Vector3 x0 = c + new Vector3(0, r, 0);
+            Vector3 x1 = c + new Vector3(0, 0, r);
+            Vector3 x2 = c + new Vector3(0, -r, 0);
+            Vector3 x3 = c + new Vector3(0, 0, -r);
+
+            Vector3 y0 = c + new Vector3(0, 0, r);
+            Vector3 y1 = c + new Vector3(r, 0, 0);
+            Vector3 y2 = c + new Vector3(0, 0, -r);
+            Vector3 y3 = c + new Vector3(-r, 0, 0);
+
+            Vector3 z0 = c + new Vector3(0, r, 0);
+            Vector3 z1 = c + new Vector3(r, 0, 0);
+            Vector3 z2 = c + new Vector3(0, -r, 0);
+            Vector3 z3 = c + new Vector3(-r, 0, 0);
+
+            _spawnSequence = new Vector3[] { x0, x1, x2, x3, y0, y1, y2, y3, z0, z1, z2, z3, c };
+            _spawnIndex = 0;
+        }
+
+        void SpawnNextTarget()
+        {
             _currentTargets.Clear();
 
+            Vector3 spawnPos = _spawnSequence[_spawnIndex % _spawnSequence.Length];
+            _spawnIndex++;
+
             float size = _sizes[Random.Range(0, _sizes.Length)];
-            float distance = Random.Range(CalibrationData.MinDistance, CalibrationData.MaxDistance);
-            float yaw = Random.Range(-maxYawAngleFromCenter, maxYawAngleFromCenter);
-            float pitch = Random.Range(-maxPitchAngleFromCenter, maxPitchAngleFromCenter);
-
-            Vector3 direction = _spawnCameraRotation * Vector3.forward;
-            direction = Quaternion.AngleAxis(yaw, _spawnCameraRotation * Vector3.up) * direction;
-            direction = Quaternion.AngleAxis(pitch, _spawnCameraRotation * Vector3.right) * direction;
-
-            Vector3 spawnPos = _spawnCameraPosition + direction.normalized * distance;
 
             GameObject target = Instantiate(targetPrefab, spawnPos, Quaternion.identity);
             target.transform.localScale = Vector3.one * size;
             target.GetComponent<FittsTarget>().Init(this);
             _currentTargets.Add(target);
 
-            Debug.Log($"[SPAWN] #{_targetsHit + 1} | Pos: {spawnPos} | Size: {size} | Distance: {distance:F2} | Yaw: {yaw:F1} | Pitch: {pitch:F1} | CamPos: {_spawnCameraPosition} | CamFwd: {_spawnCameraRotation * Vector3.forward}");
+            Debug.Log($"[SPAWN] #{_targetsHit + 1} | Pos: {spawnPos} | Size: {size} | SeqIndex: {_spawnIndex - 1}");
         }
 
         public void TargetHit(FittsTarget target)
@@ -113,16 +140,29 @@ namespace FittsLaw
             _totalDifficulty += id;
 
             float timeSinceLast = Time.time - _lastHitTime;
-            _hitTimes.Add(timeSinceLast);
+            float absoluteTime = Time.time - _experimentStartTime;
             _lastHitTime = Time.time;
 
-            Debug.Log($"[HIT] #{_targetsHit} | Pos: {target.transform.position} | Size: {size} | Distance: {distanceFromLast:F2} | ID: {id:F2} | Time: {timeSinceLast:F2}s | CamPos: {playerCamera.transform.position} | CamFwd: {playerCamera.transform.forward}");
+            _records.Add(new HitRecord
+            {
+                Index = _targetsHit,
+                Time = timeSinceLast,
+                AbsoluteTime = absoluteTime,
+                Distance = distanceFromLast,
+                Size = size,
+                ID = id,
+                Position = target.transform.position,
+                SeqIndex = _spawnIndex - 1,
+                IsMiss = false
+            });
+
+            Debug.Log($"[HIT] #{_targetsHit} | Pos: {target.transform.position} | Size: {size} | Distance: {distanceFromLast:F2} | ID: {id:F2} | Time: {timeSinceLast:F2}s");
 
             _currentTargets.Remove(target.gameObject);
             Destroy(target.gameObject);
 
             if (_experimentRunning)
-                SpawnRandomTarget();
+                SpawnNextTarget();
         }
 
         public void RegisterShot(bool hit, GameObject target = null)
@@ -150,9 +190,15 @@ namespace FittsLaw
                 ? (avgDifficulty * 100f) / (avgTimePerTarget * (1f + errorRate))
                 : 0f;
 
-            Debug.Log("========== HIT TIMES ==========");
-            for (int i = 0; i < _hitTimes.Count; i++)
-                Debug.Log($"Hit #{i + 1} | Time: {_hitTimes[i]:F3}s");
+            var hitTimes = _records.Select(r => r.Time).ToList();
+            float firstHalfAvg = 0f, secondHalfAvg = 0f, slowdown = 0f;
+            if (hitTimes.Count > 1)
+            {
+                int half = hitTimes.Count / 2;
+                firstHalfAvg = hitTimes.Take(half).Average();
+                secondHalfAvg = hitTimes.Skip(half).Average();
+                slowdown = secondHalfAvg - firstHalfAvg;
+            }
 
             Debug.Log("========== EXPERIMENT RESULTS ==========");
             Debug.Log($"Total Time    : {totalTime:F2}s");
@@ -163,21 +209,41 @@ namespace FittsLaw
             Debug.Log($"Avg ID        : {avgDifficulty:F3}");
             Debug.Log($"Avg Time/Hit  : {avgTimePerTarget:F3}s");
             Debug.Log($"Score         : {score:F3}");
+            Debug.Log($"First Half Avg: {firstHalfAvg:F3}s | Second Half Avg: {secondHalfAvg:F3}s | Slowdown: {slowdown:F3}s");
 
-            if (_hitTimes.Count > 1)
-            {
-                int half = _hitTimes.Count / 2;
-                float firstHalf = _hitTimes.Take(half).Average();
-                float secondHalf = _hitTimes.Skip(half).Average();
-                Debug.Log("========== FATIGUE ANALYSIS ==========");
-                Debug.Log($"Avg Time First Half  : {firstHalf:F3}s");
-                Debug.Log($"Avg Time Second Half : {secondHalf:F3}s");
-                Debug.Log($"Slowdown             : {secondHalf - firstHalf:F3}s");
-            }
+            ExportCSV(totalTime, avgTimePerTarget, errorRate, avgDifficulty, score, firstHalfAvg, secondHalfAvg, slowdown);
 
             Debug.Log("========== END ==========");
 
             SceneManager.LoadScene("MenuScene", LoadSceneMode.Single);
+        }
+
+        void ExportCSV(float totalTime, float avgTime, float errorRate, float avgID, float score, float firstHalf, float secondHalf, float slowdown)
+        {
+            string timestamp = System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+            string folder = Path.Combine(
+                System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop),
+                $"FittsData_{timestamp}"
+            );
+            
+            Directory.CreateDirectory(folder);
+
+            var sb = new StringBuilder();
+            sb.AppendLine("hit_index;absolute_time;time_since_last;distance;size;ID;pos_x;pos_y;pos_z;seq_index");
+            foreach (var r in _records)
+            {
+                sb.AppendLine($"{r.Index};{r.AbsoluteTime:F3};{r.Time:F3};{r.Distance:F3};{r.Size:F3};{r.ID:F3};{r.Position.x:F3};{r.Position.y:F3};{r.Position.z:F3};{r.SeqIndex}");
+            }
+            string hitsPath = Path.Combine(folder, $"hits_{timestamp}.csv");
+            File.WriteAllText(hitsPath, sb.ToString());
+            Debug.Log($"[EXPORT] Hits CSV: {hitsPath}");
+
+            var sb2 = new StringBuilder();
+            sb2.AppendLine("timestamp;total_time;targets_hit;total_shots;missed_shots;error_rate;avg_ID;avg_time_per_hit;score;first_half_avg;second_half_avg;slowdown;calibration_radius;calibration_center_x;calibration_center_y;calibration_center_z");
+            sb2.AppendLine($"{timestamp};{totalTime:F3};{_targetsHit};{_totalShots};{_missedShots};{errorRate:F3};{avgID:F3};{avgTime:F3};{score:F3};{firstHalf:F3};{secondHalf:F3};{slowdown:F3};{CalibrationData.Radius:F3};{CalibrationData.Center.x:F3};{CalibrationData.Center.y:F3};{CalibrationData.Center.z:F3}");
+            string summaryPath = Path.Combine(folder, $"summary_{timestamp}.csv");
+            File.WriteAllText(summaryPath, sb2.ToString());
+            Debug.Log($"[EXPORT] Summary CSV: {summaryPath}");
         }
     }
 }

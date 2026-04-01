@@ -12,9 +12,18 @@ public class CalibrationManager : MonoBehaviour
     private bool _prevTrigger = false;
     private int _step = 0;
 
+    private readonly string[] _instructions = {
+        "Tendez le bras au maximum vers l'AVANT et appuyez sur le trigger.",
+        "Ramenez le bras au minimum vers l'ARRIÈRE et appuyez sur le trigger.",
+        "Tendez le bras au maximum vers la DROITE et appuyez sur le trigger.",
+        "Tendez le bras au maximum vers la GAUCHE et appuyez sur le trigger.",
+        "Tendez le bras au maximum vers le HAUT et appuyez sur le trigger.",
+        "Tendez le bras au maximum vers le BAS et appuyez sur le trigger.",
+    };
+
     void Start()
     {
-        SetText("Rétractez le bras et appuyez sur le trigger.");
+        SetText(_instructions[0]);
     }
 
     void Update()
@@ -27,26 +36,25 @@ public class CalibrationManager : MonoBehaviour
 
         _rightHand.TryGetFeatureValue(CommonUsages.triggerButton, out bool trigger);
 
-        if (trigger && !_prevTrigger)
+        if (trigger && !_prevTrigger && _step < 6)
         {
-            Vector3 handPos = Vector3.zero;
-            _rightHand.TryGetFeatureValue(CommonUsages.devicePosition, out handPos);
-
+            _rightHand.TryGetFeatureValue(CommonUsages.devicePosition, out Vector3 localPos);
             Transform xrOrigin = Camera.main.transform.parent?.parent ?? Camera.main.transform.parent;
-            Vector3 handWorldPos = xrOrigin != null ? xrOrigin.TransformPoint(handPos) : handPos;
-            float dist = Vector3.Distance(Camera.main.transform.position, handWorldPos);
+            Vector3 worldPos = xrOrigin != null ? xrOrigin.TransformPoint(localPos) : localPos;
 
-            if (_step == 0)
+            CalibrationData.CalibrationPoints[_step] = worldPos;
+            Debug.Log($"[Calibration] Step {_step} ({_instructions[_step].Split(' ')[7]}) : {worldPos}");
+
+            _step++;
+
+            if (_step < 6)
             {
-                CalibrationData.MinDistance = dist;
-                Debug.Log($"[Calibration] Bras rétracté : {dist:F2}m");
-                _step = 1;
-                SetText("Tendez le bras et appuyez sur le trigger.");
+                SetText(_instructions[_step]);
             }
-            else if (_step == 1)
+            else
             {
-                CalibrationData.MaxDistance = dist;
-                Debug.Log($"[Calibration] Bras tendu : {dist:F2}m");
+                CalibrationData.Compute();
+                Debug.Log($"[Calibration] Centre: {CalibrationData.Center} | Rayon: {CalibrationData.Radius:F2}m");
                 SetText("Calibration terminée !");
                 SceneManager.LoadScene(experimentSceneName);
             }
