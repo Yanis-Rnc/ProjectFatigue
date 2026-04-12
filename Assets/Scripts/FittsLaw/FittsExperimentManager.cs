@@ -13,6 +13,7 @@ namespace FittsLaw
     {
         public Camera playerCamera;
         public GameObject targetPrefab;
+        public string exportPath;
 
         private List<GameObject> _currentTargets = new List<GameObject>();
         private int _targetsHit;
@@ -221,10 +222,10 @@ namespace FittsLaw
         void ExportCSV(float totalTime, float avgTime, float errorRate, float avgID, float score, float firstHalf, float secondHalf, float slowdown)
         {
             string timestamp = System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-            string folder = Path.Combine(
-                System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop),
-                $"FittsData_{timestamp}"
-            );
+            string basePath = string.IsNullOrEmpty(exportPath)
+                ? System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop)
+                : exportPath;
+            string folder = Path.Combine(basePath, $"FittsData_{timestamp}");
             
             Directory.CreateDirectory(folder);
 

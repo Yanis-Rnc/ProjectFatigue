@@ -13,6 +13,6 @@ public static class CalibrationData
         float distSum = 0f;
         foreach (var p in CalibrationPoints)
             distSum += Vector3.Distance(Center, p);
-        Radius = (distSum / CalibrationPoints.Length) / 2;
+        Radius = (distSum / CalibrationPoints.Length);
     }
 }

@@ -9,7 +9,9 @@ public class VRRayInteractor : MonoBehaviour
     public Transform rayOrigin;
 
     private InputDevice _rightHand;
-    private bool _prevTrigger = false;
+    private InputDevice _leftHand;
+    private bool _prevTriggerRight = false;
+    private bool _prevTriggerLeft = false;
     private LineRenderer _line;
 
     void Start()
@@ -29,11 +31,14 @@ public class VRRayInteractor : MonoBehaviour
     void Update()
     {
         if (!_rightHand.isValid)
-        {
             _rightHand = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
-            _line.enabled = false;
-            return;
-        }
+        if (!_leftHand.isValid)
+            _leftHand = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
+
+        _rightHand.TryGetFeatureValue(CommonUsages.triggerButton, out bool triggerRight);
+        _leftHand.TryGetFeatureValue(CommonUsages.triggerButton, out bool triggerLeft);
+
+        bool triggered = (triggerRight && !_prevTriggerRight) || (triggerLeft && !_prevTriggerLeft);
 
         Vector3 worldPos = rayOrigin.position - rayOrigin.forward * .025f;
         Vector3 worldDir = rayOrigin.forward;
@@ -46,9 +51,7 @@ public class VRRayInteractor : MonoBehaviour
         _line.SetPosition(0, worldPos);
         _line.SetPosition(1, endPoint);
 
-        _rightHand.TryGetFeatureValue(CommonUsages.triggerButton, out bool trigger);
-
-        if (trigger && !_prevTrigger)
+        if (triggered)
         {
             if (Physics.Raycast(new Ray(worldPos, worldDir), out RaycastHit hit, rayDistance))
             {
@@ -59,6 +62,7 @@ public class VRRayInteractor : MonoBehaviour
             else manager.RegisterShot(false);
         }
 
-        _prevTrigger = trigger;
+        _prevTriggerRight = triggerRight;
+        _prevTriggerLeft = triggerLeft;
     }
 }
