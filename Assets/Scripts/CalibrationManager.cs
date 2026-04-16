@@ -9,7 +9,9 @@ public class CalibrationManager : MonoBehaviour
     public TextMeshProUGUI instructionText;
 
     private InputDevice _rightHand;
-    private bool _prevTrigger = false;
+    private InputDevice _leftHand;
+    private bool _prevTriggerRight = false;
+    private bool _prevTriggerLeft = false;
     private int _step = 0;
 
     private readonly string[] _instructions = {
@@ -29,38 +31,41 @@ public class CalibrationManager : MonoBehaviour
     void Update()
     {
         if (!_rightHand.isValid)
-        {
             _rightHand = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
-            return;
-        }
+        if (!_leftHand.isValid)
+            _leftHand = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
 
-        _rightHand.TryGetFeatureValue(CommonUsages.triggerButton, out bool trigger);
+        _rightHand.TryGetFeatureValue(CommonUsages.triggerButton, out bool triggerRight);
+        _leftHand.TryGetFeatureValue(CommonUsages.triggerButton, out bool triggerLeft);
 
-        if (trigger && !_prevTrigger && _step < 6)
+        bool triggered = (triggerRight && !_prevTriggerRight) || (triggerLeft && !_prevTriggerLeft);
+
+        if (triggered && _step < 6)
         {
-            _rightHand.TryGetFeatureValue(CommonUsages.devicePosition, out Vector3 localPos);
+            InputDevice activeHand = (triggerRight && !_prevTriggerRight) ? _rightHand : _leftHand;
+            activeHand.TryGetFeatureValue(CommonUsages.devicePosition, out Vector3 localPos);
+
             Transform xrOrigin = Camera.main.transform.parent?.parent ?? Camera.main.transform.parent;
             Vector3 worldPos = xrOrigin != null ? xrOrigin.TransformPoint(localPos) : localPos;
 
             CalibrationData.CalibrationPoints[_step] = worldPos;
-            Debug.Log($"[Calibration] Step {_step} ({_instructions[_step].Split(' ')[7]}) : {worldPos}");
+            Debug.Log($"[Calibration] Step {_step} : {worldPos}");
 
             _step++;
 
             if (_step < 6)
-            {
                 SetText(_instructions[_step]);
-            }
             else
             {
                 CalibrationData.Compute();
-                Debug.Log($"[Calibration] Centre: {CalibrationData.Center} | Rayon: {CalibrationData.Radius:F2}m");
+                Debug.Log($"[Calibration] Centre: {CalibrationData.Center} | Depth: {CalibrationData.RadiusDepth:F2} | Width: {CalibrationData.RadiusWidth:F2} | Height: {CalibrationData.RadiusHeight:F2}");
                 SetText("Calibration terminée !");
                 SceneManager.LoadScene(experimentSceneName);
             }
         }
 
-        _prevTrigger = trigger;
+        _prevTriggerRight = triggerRight;
+        _prevTriggerLeft = triggerLeft;
     }
 
     void SetText(string msg)

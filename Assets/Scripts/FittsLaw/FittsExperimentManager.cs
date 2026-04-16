@@ -84,22 +84,24 @@ namespace FittsLaw
         void BuildSpawnSequence()
         {
             Vector3 c = CalibrationData.Center;
-            float r = CalibrationData.Radius;
+            float rD = CalibrationData.RadiusDepth;
+            float rW = CalibrationData.RadiusWidth;
+            float rH = CalibrationData.RadiusHeight;
 
-            Vector3 x0 = c + new Vector3(0, r, 0);
-            Vector3 x1 = c + new Vector3(0, 0, r);
-            Vector3 x2 = c + new Vector3(0, -r, 0);
-            Vector3 x3 = c + new Vector3(0, 0, -r);
+            Vector3 x0 = c + new Vector3(0, rH, 0);
+            Vector3 x1 = c + new Vector3(0, 0, rD);
+            Vector3 x2 = c + new Vector3(0, -rH, 0);
+            Vector3 x3 = c + new Vector3(0, 0, -rD);
 
-            Vector3 y0 = c + new Vector3(0, 0, r);
-            Vector3 y1 = c + new Vector3(r, 0, 0);
-            Vector3 y2 = c + new Vector3(0, 0, -r);
-            Vector3 y3 = c + new Vector3(-r, 0, 0);
+            Vector3 y0 = c + new Vector3(0, 0, rD);
+            Vector3 y1 = c + new Vector3(rW, 0, 0);
+            Vector3 y2 = c + new Vector3(0, 0, -rD);
+            Vector3 y3 = c + new Vector3(-rW, 0, 0);
 
-            Vector3 z0 = c + new Vector3(0, r, 0);
-            Vector3 z1 = c + new Vector3(r, 0, 0);
-            Vector3 z2 = c + new Vector3(0, -r, 0);
-            Vector3 z3 = c + new Vector3(-r, 0, 0);
+            Vector3 z0 = c + new Vector3(0, rH, 0);
+            Vector3 z1 = c + new Vector3(rW, 0, 0);
+            Vector3 z2 = c + new Vector3(0, -rH, 0);
+            Vector3 z3 = c + new Vector3(-rW, 0, 0);
 
             _spawnSequence = new Vector3[] { x0, x1, x2, x3, y0, y1, y2, y3, z0, z1, z2, z3, c };
             _spawnIndex = 0;
@@ -241,7 +243,7 @@ namespace FittsLaw
 
             var sb2 = new StringBuilder();
             sb2.AppendLine("timestamp;total_time;targets_hit;total_shots;missed_shots;error_rate;avg_ID;avg_time_per_hit;score;first_half_avg;second_half_avg;slowdown;calibration_radius;calibration_center_x;calibration_center_y;calibration_center_z");
-            sb2.AppendLine($"{timestamp};{totalTime:F3};{_targetsHit};{_totalShots};{_missedShots};{errorRate:F3};{avgID:F3};{avgTime:F3};{score:F3};{firstHalf:F3};{secondHalf:F3};{slowdown:F3};{CalibrationData.Radius:F3};{CalibrationData.Center.x:F3};{CalibrationData.Center.y:F3};{CalibrationData.Center.z:F3}");
+            sb2.AppendLine($"{timestamp};{totalTime:F3};{_targetsHit};{_totalShots};{_missedShots};{errorRate:F3};{avgID:F3};{avgTime:F3};{score:F3};{firstHalf:F3};{secondHalf:F3};{slowdown:F3};{CalibrationData.Center.x:F3};{CalibrationData.Center.y:F3};{CalibrationData.Center.z:F3}");
             string summaryPath = Path.Combine(folder, $"summary_{timestamp}.csv");
             File.WriteAllText(summaryPath, sb2.ToString());
             Debug.Log($"[EXPORT] Summary CSV: {summaryPath}");
