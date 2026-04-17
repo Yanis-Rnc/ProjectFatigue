@@ -23,6 +23,11 @@ namespace FittsLaw
         private int _missedShots;
         private float _totalDifficulty;
 
+        private InputDevice _rightHand;
+        private InputDevice _leftHand;
+        private bool _prevTriggerRight = false;
+        private bool _prevTriggerLeft = false;
+        
         private float _lastHitTime;
         private Vector3 _lastTargetPos = Vector3.zero;
         private bool _experimentRunning = true;
@@ -64,14 +69,23 @@ namespace FittsLaw
 
         void Update()
         {
+            if (!_rightHand.isValid)
+                _rightHand = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
+            if (!_leftHand.isValid)
+                _leftHand = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
+
+            _rightHand.TryGetFeatureValue(CommonUsages.primary2DAxisClick, out bool triggerRight);
+            _leftHand.TryGetFeatureValue(CommonUsages.primary2DAxisClick, out bool triggerLeft);
+
+            bool triggered = (triggerRight && !_prevTriggerRight) || (triggerLeft && !_prevTriggerLeft);
+            
             bool desktopStop = Input.GetKeyDown(KeyCode.S);
             bool vrStop = false;
 
-            if (XRSettings.isDeviceActive)
+            if (triggered)
             {
-                InputDevice rightHand = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
-                if (rightHand.isValid)
-                    rightHand.TryGetFeatureValue(CommonUsages.primary2DAxisClick, out vrStop);
+                InputDevice activeHand = (triggerRight && !_prevTriggerRight) ? _rightHand : _leftHand;
+                activeHand.TryGetFeatureValue(CommonUsages.primary2DAxisClick, out vrStop);
             }
 
             if (_experimentRunning && (desktopStop || vrStop))
@@ -79,6 +93,8 @@ namespace FittsLaw
                 _experimentRunning = false;
                 StopExperiment();
             }
+            _prevTriggerRight = triggerRight;
+            _prevTriggerLeft = triggerLeft;
         }
 
         void BuildSpawnSequence()
@@ -109,7 +125,7 @@ namespace FittsLaw
 
         void SpawnNextTarget()
         {
-            _currentTargets.Clear();
+            //_currentTargets.Clear();
 
             Vector3 spawnPos = _spawnSequence[_spawnIndex % _spawnSequence.Length];
             _spawnIndex++;

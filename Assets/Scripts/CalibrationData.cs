@@ -14,7 +14,7 @@ public static class CalibrationData
         Center = (CalibrationPoints[0] + CalibrationPoints[1]) / 2f;
 
         RadiusDepth  = (Vector3.Distance(Center, CalibrationPoints[0]) + Vector3.Distance(Center, CalibrationPoints[1])) / 2f;
-        RadiusWidth  = (Vector3.Distance(Center, CalibrationPoints[2]) + Vector3.Distance(Center, CalibrationPoints[3])) / 2f;
-        RadiusHeight = (Vector3.Distance(Center, CalibrationPoints[4]) + Vector3.Distance(Center, CalibrationPoints[5])) / 2f;
+        RadiusWidth  = (Vector3.Distance(Center, CalibrationPoints[2]) + Vector3.Distance(Center, CalibrationPoints[3])) / 2.5f;
+        RadiusHeight = (Vector3.Distance(Center, CalibrationPoints[4]) + Vector3.Distance(Center, CalibrationPoints[5])) / 2.5f;
     }
 }

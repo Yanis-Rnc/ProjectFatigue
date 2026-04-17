@@ -16,7 +16,7 @@ public class CalibrationManager : MonoBehaviour
 
     private readonly string[] _instructions = {
         "Tendez le bras au maximum vers l'AVANT au niveau de votre nez et appuyez sur le trigger.",
-        "Ramenez le bras collé à votre nez et appuyez sur le trigger.",
+        "Ramenez le bras à proximité de votre nez et appuyez sur le trigger.",
         "Tendez le bras au maximum vers la DROITE tout en restant dans votre champ de vision et appuyez sur le trigger.",
         "Tendez le bras au maximum vers la GAUCHE tout en restant dans votre champ de vision et appuyez sur le trigger.",
         "Tendez le bras au maximum vers le HAUT tout en restant dans votre champ de vision et appuyez sur le trigger.",
