@@ -3,6 +3,10 @@ using UnityEngine.XR;
 using UnityEngine.SceneManagement;
 using TMPro;
 
+/// <summary>
+/// Handles the calibration process before the experiment.
+/// Guides the user and records spatial bounds.
+/// </summary>
 public class CalibrationManager : MonoBehaviour
 {
     public string experimentSceneName = "ExperimentScene";
@@ -10,10 +14,15 @@ public class CalibrationManager : MonoBehaviour
 
     private InputDevice _rightHand;
     private InputDevice _leftHand;
+    
     private bool _prevTriggerRight = false;
     private bool _prevTriggerLeft = false;
+    
     private int _step = 0;
 
+    /// <summary>
+    /// Instructions displayed to the user.
+    /// </summary>
     private readonly string[] _instructions = {
         "Tendez le bras au maximum vers l'AVANT au niveau de votre nez et appuyez sur le trigger.",
         "Ramenez le bras à proximité de votre nez et appuyez sur le trigger.",

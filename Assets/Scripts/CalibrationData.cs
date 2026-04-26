@@ -1,5 +1,8 @@
 ﻿using UnityEngine;
 
+/// <summary>
+/// Stores calibration results used to define the interaction space.
+/// </summary>
 public static class CalibrationData
 {
     public static Vector3[] CalibrationPoints = new Vector3[6];
@@ -9,6 +12,9 @@ public static class CalibrationData
     public static float RadiusWidth  = 0.3f;
     public static float RadiusHeight = 0.3f;
 
+    /// <summary>
+    /// Computes center and radii from calibration points.
+    /// </summary>
     public static void Compute()
     {
         Center = (CalibrationPoints[0] + CalibrationPoints[1]) / 2f;
